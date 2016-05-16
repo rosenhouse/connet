@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -e -x -u
+cd $GOPATH
+
+# ensure gosub is installed (this will recompile it only if necessary)
+# go get github.com/vito/gosub
+go install github.com/vito/gosub
+
+{
+  gosub list \
+    -app policy-server \
+    -app cf-cli-plugin \
+    -app github.com/vito/gosub
+
+  gosub list \
+    -test policy-server/... \
+    -test cf-cli-plugin/...
+
+} > /tmp/packages
+
+cat /tmp/packages | xargs gosub sync
