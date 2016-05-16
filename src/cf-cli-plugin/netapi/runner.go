@@ -44,6 +44,15 @@ func (r *Runner) getRule(name1, name2 string) (Rule, error) {
 
 func (r *Runner) Run(args []string) error {
 	command := args[0]
+
+	isLoggedIn, err := r.CliConnection.IsLoggedIn()
+	if err != nil {
+		return fmt.Errorf("checking logged in: %s", err)
+	}
+	if !isLoggedIn {
+		return fmt.Errorf("please log in")
+	}
+
 	token, err := r.CliConnection.AccessToken()
 	if err != nil {
 		return fmt.Errorf("getting token: %s", err)
