@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"lib/marshal"
-	"log"
 	"os"
 	"policy-server/config"
 	"policy-server/handlers"
+	"policy-server/store"
 
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
@@ -18,30 +18,54 @@ import (
 )
 
 func main() {
+	logger := lager.NewLogger("policy-server")
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.INFO))
+	logger.Info("starting-setup")
+	defer logger.Info("stopping")
+
 	var configFilePath string
 	const configFileFlag = "configFile"
 
 	flag.StringVar(&configFilePath, configFileFlag, "", "")
 	flag.Parse()
+	logger.Info("flag-parse-complete")
 
 	conf, err := config.ParseConfigFile(configFilePath)
+	if err != nil {
+		logger.Fatal("config", err)
+	}
 
-	logger := lager.NewLogger("policy-server")
 	marshaler := marshal.MarshalFunc(json.Marshal)
+	unmarshaler := marshal.UnmarshalFunc(json.Unmarshal)
+
+	rulesStore := &store.MemoryStore{}
 
 	rataHandlers := rata.Handlers{}
 	rataHandlers["rules_list"] = &handlers.RulesList{
 		Logger:    logger,
 		Marshaler: marshaler,
+		Store:     rulesStore,
+	}
+	rataHandlers["rules_add"] = &handlers.RulesAdd{
+		Logger:      logger,
+		Unmarshaler: unmarshaler,
+		Store:       rulesStore,
+	}
+	rataHandlers["rules_delete"] = &handlers.RulesDelete{
+		Logger:      logger,
+		Unmarshaler: unmarshaler,
+		Store:       rulesStore,
 	}
 
 	routes := rata.Routes{
 		{Name: "rules_list", Method: "GET", Path: "/rules"},
+		{Name: "rules_add", Method: "POST", Path: "/rules/add"},
+		{Name: "rules_delete", Method: "POST", Path: "/rules/delete"},
 	}
 
 	rataRouter, err := rata.NewRouter(routes, rataHandlers)
 	if err != nil {
-		log.Fatalf("unable to create rata router: %s", err) // not tested
+		logger.Fatal("create-rata-route", err)
 	}
 
 	httpServer := http_server.New(conf.ListenAddress, rataRouter)
@@ -52,10 +76,12 @@ func main() {
 
 	group := grouper.NewOrdered(os.Interrupt, members)
 
+	logger.Info("ifrit-invoke")
 	monitor := ifrit.Invoke(sigmon.New(group))
 
+	logger.Info("ifrit-wait")
 	err = <-monitor.Wait()
 	if err != nil {
-		log.Fatalf("terminated: %s", err)
+		logger.Fatal("ifrit-wait", err)
 	}
 }

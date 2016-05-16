@@ -63,6 +63,8 @@ var _ = Describe("Policy server", func() {
 
 	Describe("rule lifecycle", func() {
 		It("should support list, add and delete on the set of rules", func() {
+			Eventually(serverIsAvailable, DEFAULT_TIMEOUT).Should(Succeed())
+
 			By("listing the rules")
 			rules, err := outerClient.ListRules()
 			Expect(err).NotTo(HaveOccurred())
@@ -70,20 +72,20 @@ var _ = Describe("Policy server", func() {
 
 			By("adding a new rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Endpoint1: "ep1",
-				Endpoint2: "ep2",
+				Group1: "group1",
+				Group2: "group2",
 			})).To(Succeed())
 
 			By("adding a second rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Endpoint1: "ep2",
-				Endpoint2: "ep3",
+				Group1: "group2",
+				Group2: "group3",
 			})).To(Succeed())
 
 			By("adding a third rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Endpoint1: "ep2",
-				Endpoint2: "ep2",
+				Group1: "group2",
+				Group2: "group2",
 			})).To(Succeed())
 
 			By("listing the rules")
@@ -91,15 +93,15 @@ var _ = Describe("Policy server", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(HaveLen(3))
 			Expect(rules).To(ConsistOf([]models.Rule{
-				{Endpoint1: "ep1", Endpoint2: "ep2"},
-				{Endpoint1: "ep2", Endpoint2: "ep3"},
-				{Endpoint1: "ep2", Endpoint2: "ep2"},
+				{Group1: "group1", Group2: "group2"},
+				{Group1: "group2", Group2: "group3"},
+				{Group1: "group2", Group2: "group2"},
 			}))
 
 			By("removing the second rule")
 			Expect(outerClient.DeleteRule(models.Rule{
-				Endpoint1: "ep2",
-				Endpoint2: "ep3",
+				Group1: "group2",
+				Group2: "group3",
 			})).To(Succeed())
 
 			By("listing the rules")
@@ -107,8 +109,8 @@ var _ = Describe("Policy server", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(HaveLen(2))
 			Expect(rules).To(ConsistOf([]models.Rule{
-				{Endpoint1: "ep1", Endpoint2: "ep2"},
-				{Endpoint1: "ep2", Endpoint2: "ep2"},
+				{Group1: "group1", Group2: "group2"},
+				{Group1: "group2", Group2: "group2"},
 			}))
 		})
 	})
