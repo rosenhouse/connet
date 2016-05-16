@@ -12,30 +12,6 @@ const (
 	CommandList     = "net-list"
 )
 
-type Rule struct {
-	AppGuid1 string
-	AppGuid2 string
-}
-
-func (r Rule) String() string {
-	return fmt.Sprintf("%s <--> %s", r.AppGuid1, r.AppGuid2)
-}
-
-type Client struct{}
-
-func (c *Client) Allow(rule Rule, token string) error {
-	fmt.Printf("%s\n", rule)
-	return nil
-}
-func (c *Client) Disallow(rule Rule, token string) error {
-	fmt.Printf("%s\n", rule)
-	return nil
-}
-
-func (c *Client) List(token string) ([]Rule, error) {
-	return nil, nil
-}
-
 //go:generate counterfeiter -o ../fakes/Client.go --fake-name Client . client
 type client interface {
 	Allow(rule Rule, token string) error
