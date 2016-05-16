@@ -32,7 +32,8 @@ func main() {
 
 	conf, err := config.ParseConfigFile(configFilePath)
 	if err != nil {
-		logger.Fatal("config", err)
+		logger.Error("config", err)
+		os.Exit(1)
 	}
 
 	marshaler := marshal.MarshalFunc(json.Marshal)

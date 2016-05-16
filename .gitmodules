@@ -42,3 +42,6 @@
 	path = src/github.com/google/go-querystring
 	url = https://github.com/google/go-querystring
 	branch = master
+[submodule "src/github.com/pivotal-cf-experimental/rainmaker"]
+	path = src/github.com/pivotal-cf-experimental/rainmaker
+	url = https://github.com/pivotal-cf-experimental/rainmaker

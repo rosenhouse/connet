@@ -2,10 +2,14 @@ package netapi
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	policyClient "policy-server/client"
 
 	"github.com/cloudfoundry/cli/plugin"
+	"github.com/pivotal-cf-experimental/rainmaker"
 )
 
 type Plugin struct{}
@@ -27,10 +31,30 @@ func (p *Plugin) Run(cliConnection plugin.CliConnection, args []string) {
 		return // may be CLI-MESSAGE-UNINSTALL, just silently return
 	}
 
+	apiEndpoint, err := cliConnection.ApiEndpoint()
+	if err != nil {
+		logger.Fatalf("unable to discover api endpoint: %s", err)
+	}
+
+	skipVerifySSL, err := cliConnection.IsSSLDisabled()
+	if err != nil {
+		logger.Fatalf("unable to discover status of ssl verification: %s", err)
+	}
+
+	var traceWriter io.Writer
+	if os.Getenv("CF_TRACE") == "true" {
+		traceWriter = os.Stdout
+	}
+
 	runner := &Runner{
-		Client:        &Client{},
+		Client:        policyClient.NewOuterClient("http://127.0.0.1:5555", http.DefaultClient),
 		UserLogger:    logger,
 		CliConnection: cliConnection,
+		Rainmaker: rainmaker.NewClient(rainmaker.Config{
+			Host:          apiEndpoint,
+			SkipVerifySSL: skipVerifySSL,
+			TraceWriter:   traceWriter,
+		}),
 	}
 
 	if err := runner.Run(args); err != nil {

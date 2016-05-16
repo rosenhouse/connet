@@ -14,6 +14,7 @@ type MemoryStore struct {
 }
 
 func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
+	logger = logger.Session("memory-store-add")
 	logger.Info("start")
 	defer logger.Info("done")
 
@@ -27,6 +28,7 @@ func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
 }
 
 func (s *MemoryStore) Delete(logger lager.Logger, rule models.Rule) error {
+	logger = logger.Session("memory-store-delete")
 	logger.Info("start")
 	defer logger.Info("done")
 
@@ -52,6 +54,7 @@ func (s *MemoryStore) Delete(logger lager.Logger, rule models.Rule) error {
 }
 
 func (s *MemoryStore) List(logger lager.Logger) ([]models.Rule, error) {
+	logger = logger.Session("memory-store-list")
 	logger.Info("start")
 	defer logger.Info("done")
 
