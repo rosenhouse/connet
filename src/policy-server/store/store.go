@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"policy-server/models"
 	"sync"
 
@@ -9,8 +10,45 @@ import (
 )
 
 type MemoryStore struct {
-	rules []models.Rule
-	lock  sync.Mutex
+	Tagger Tagger
+	tags   map[string]*models.PacketTag
+	rules  []models.Rule
+	lock   sync.Mutex
+}
+
+func NewMemoryStore(tagger Tagger) *MemoryStore {
+	return &MemoryStore{
+		Tagger: tagger,
+		tags:   make(map[string]*models.PacketTag),
+	}
+}
+
+func (s *MemoryStore) GetWhitelists(logger lager.Logger, groups []string) ([]models.IngressWhitelist, error) {
+	all := make([]models.IngressWhitelist, len(groups))
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for i, destGroup := range groups {
+		all[i].Destination.ID = destGroup
+		var found bool
+		all[i].Destination.Tag, found = s.tags[destGroup]
+		if !found {
+			logger.Info("no-tag-found", lager.Data{"group": destGroup})
+			continue
+		}
+		for _, rule := range s.rules {
+			if rule.Group2 != destGroup {
+				continue
+			}
+			all[i].AllowedSources = append(all[i].AllowedSources, models.TaggedGroup{
+				ID:  rule.Group1,
+				Tag: s.tags[rule.Group1],
+			})
+		}
+	}
+	logger.Info("built-whitelist", lager.Data{"whitelist": all})
+	return all, nil
 }
 
 func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
@@ -18,11 +56,25 @@ func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
 	logger.Info("start")
 	defer logger.Info("done")
 
+	g1Tag, err := s.Tagger.GetTag(rule.Group1)
+	if err != nil {
+		logger.Error("get-tag", err, lager.Data{"group": rule.Group1})
+		return fmt.Errorf("get tag: %s", err)
+	}
+
+	g2Tag, err := s.Tagger.GetTag(rule.Group2)
+	if err != nil {
+		logger.Error("get-tag", err, lager.Data{"group": rule.Group2})
+		return fmt.Errorf("get tag: %s", err)
+	}
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.rules = append(s.rules, rule)
-	logger.Info("added", lager.Data{"rule": rule})
+	s.tags[rule.Group1] = g1Tag
+	s.tags[rule.Group2] = g2Tag
+	logger.Info("added", lager.Data{"rule": rule, "group1-tag": g1Tag, "group2-tag": g2Tag})
 
 	return nil
 }

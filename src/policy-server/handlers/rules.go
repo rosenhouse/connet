@@ -13,6 +13,7 @@ type store interface {
 	Add(logger lager.Logger, rule models.Rule) error
 	Delete(logger lager.Logger, rule models.Rule) error
 	List(logger lager.Logger) ([]models.Rule, error)
+	GetWhitelists(logger lager.Logger, groups []string) ([]models.IngressWhitelist, error)
 }
 
 type RulesList struct {

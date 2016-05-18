@@ -22,6 +22,7 @@ var _ = Describe("Policy server", func() {
 		address        string
 		configFilePath string
 		outerClient    *client.OuterClient
+		innerClient    *client.InnerClient
 
 		logger *lagertest.TestLogger
 	)
@@ -40,6 +41,7 @@ var _ = Describe("Policy server", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		outerClient = client.NewOuterClient("http://"+address, http.DefaultClient)
+		innerClient = client.NewInnerClient("http://"+address, http.DefaultClient)
 	})
 
 	AfterEach(func() {
@@ -65,7 +67,18 @@ var _ = Describe("Policy server", func() {
 		It("should support list, add and delete on the set of rules", func() {
 			Eventually(serverIsAvailable, DEFAULT_TIMEOUT).Should(Succeed())
 
-			By("listing the rules")
+			By("polling for whitelists from the inside")
+			groupRules, err := innerClient.GetWhitelists([]string{"group1", "group2"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(HaveLen(2))
+			Expect(groupRules[0].Destination.ID).To(Equal("group1"))
+			Expect(groupRules[0].Destination.Tag).To(BeNil())
+			Expect(groupRules[0].AllowedSources).To(BeEmpty())
+			Expect(groupRules[1].Destination.ID).To(Equal("group2"))
+			Expect(groupRules[1].Destination.Tag).To(BeNil())
+			Expect(groupRules[1].AllowedSources).To(BeEmpty())
+
+			By("listing the rules from the outside")
 			rules, err := outerClient.ListRules()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(BeEmpty())
@@ -76,11 +89,48 @@ var _ = Describe("Policy server", func() {
 				Group2: "group2",
 			})).To(Succeed())
 
+			By("getting the packet tags for the two groups")
+			groupRules, err = innerClient.GetWhitelists([]string{"group1", "group2", "group3"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(HaveLen(3))
+			Expect(groupRules[0].Destination.ID).To(Equal("group1"))
+			Expect(groupRules[0].Destination.Tag).NotTo(BeNil())
+			group1Tag := *groupRules[0].Destination.Tag
+			Expect(groupRules[0].AllowedSources).To(BeEmpty())
+
+			Expect(groupRules[1].Destination.ID).To(Equal("group2"))
+			Expect(groupRules[1].Destination.Tag).NotTo(BeNil())
+			group2Tag := *groupRules[1].Destination.Tag
+			Expect(groupRules[1].AllowedSources).To(HaveLen(1))
+			Expect(*groupRules[1].AllowedSources[0].Tag).To(Equal(group1Tag))
+
+			Expect(groupRules[2].Destination.ID).To(Equal("group3"))
+			Expect(groupRules[2].Destination.Tag).To(BeNil())
+			Expect(groupRules[2].AllowedSources).To(BeEmpty())
+
+			By("checking that the packet tags are unique")
+			Expect(group1Tag).NotTo(Equal(group2Tag))
+
 			By("adding a second rule")
 			Expect(outerClient.AddRule(models.Rule{
 				Group1: "group2",
 				Group2: "group3",
 			})).To(Succeed())
+
+			By("getting the packet tags for the third group")
+			groupRules, err = innerClient.GetWhitelists([]string{"group3"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(HaveLen(1))
+			Expect(groupRules[0].Destination.ID).To(Equal("group3"))
+			Expect(groupRules[0].Destination.Tag).NotTo(BeNil())
+			group3Tag := *groupRules[0].Destination.Tag
+			Expect(groupRules[0].AllowedSources).To(HaveLen(1))
+			Expect(groupRules[0].AllowedSources[0]).To(BeEquivalentTo(models.TaggedGroup{
+				ID:  "group2",
+				Tag: &group2Tag,
+			}))
+
+			Expect(group3Tag).NotTo(Equal(group2Tag))
 
 			By("adding a third rule")
 			Expect(outerClient.AddRule(models.Rule{
@@ -88,7 +138,23 @@ var _ = Describe("Policy server", func() {
 				Group2: "group2",
 			})).To(Succeed())
 
-			By("listing the rules")
+			By("getting the packet tags for the second group")
+			groupRules, err = innerClient.GetWhitelists([]string{"group2"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(HaveLen(1))
+			Expect(groupRules[0].Destination.ID).To(Equal("group2"))
+			Expect(*groupRules[0].Destination.Tag).To(Equal(group2Tag))
+			Expect(groupRules[0].AllowedSources).To(HaveLen(2))
+			Expect(groupRules[0].AllowedSources).To(ContainElement(BeEquivalentTo(models.TaggedGroup{
+				ID:  "group1",
+				Tag: &group1Tag,
+			})))
+			Expect(groupRules[0].AllowedSources).To(ContainElement(BeEquivalentTo(models.TaggedGroup{
+				ID:  "group2",
+				Tag: &group2Tag,
+			})))
+
+			By("listing the rules from the outside")
 			rules, err = outerClient.ListRules()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(HaveLen(3))
@@ -112,6 +178,14 @@ var _ = Describe("Policy server", func() {
 				{Group1: "group1", Group2: "group2"},
 				{Group1: "group2", Group2: "group2"},
 			}))
+
+			By("getting the packet tags for the third group")
+			groupRules, err = innerClient.GetWhitelists([]string{"group3"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(HaveLen(1))
+			Expect(groupRules[0].Destination.ID).To(Equal("group3"))
+			Expect(*groupRules[0].Destination.Tag).To(Equal(group3Tag))
+			Expect(groupRules[0].AllowedSources).To(BeEmpty())
 		})
 	})
 })

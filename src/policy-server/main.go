@@ -39,7 +39,13 @@ func main() {
 	marshaler := marshal.MarshalFunc(json.Marshal)
 	unmarshaler := marshal.UnmarshalFunc(json.Unmarshal)
 
-	rulesStore := &store.MemoryStore{}
+	packetTagger, err := store.NewMemoryTagger(4)
+	if err != nil {
+		logger.Error("packet tag", err)
+		os.Exit(1)
+	}
+
+	rulesStore := store.NewMemoryStore(packetTagger)
 
 	rataHandlers := rata.Handlers{}
 	rataHandlers["rules_list"] = &handlers.RulesList{
@@ -57,11 +63,17 @@ func main() {
 		Unmarshaler: unmarshaler,
 		Store:       rulesStore,
 	}
+	rataHandlers["whitelists"] = &handlers.Whitelists{
+		Logger:    logger,
+		Marshaler: marshaler,
+		Store:     rulesStore,
+	}
 
 	routes := rata.Routes{
 		{Name: "rules_list", Method: "GET", Path: "/rules"},
 		{Name: "rules_add", Method: "POST", Path: "/rules/add"},
 		{Name: "rules_delete", Method: "POST", Path: "/rules/delete"},
+		{Name: "whitelists", Method: "GET", Path: "/whitelists"},
 	}
 
 	rataRouter, err := rata.NewRouter(routes, rataHandlers)
