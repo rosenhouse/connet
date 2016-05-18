@@ -22,6 +22,7 @@ var _ = Describe("Policy server", func() {
 		address        string
 		configFilePath string
 		outerClient    *client.OuterClient
+		innerClient    *client.InnerClient
 
 		logger *lagertest.TestLogger
 	)
@@ -40,6 +41,7 @@ var _ = Describe("Policy server", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		outerClient = client.NewOuterClient("http://"+address, http.DefaultClient)
+		innerClient = client.NewInnerClient("http://"+address, http.DefaultClient)
 	})
 
 	AfterEach(func() {
@@ -65,7 +67,12 @@ var _ = Describe("Policy server", func() {
 		It("should support list, add and delete on the set of rules", func() {
 			Eventually(serverIsAvailable, DEFAULT_TIMEOUT).Should(Succeed())
 
-			By("listing the rules")
+			By("listing the groups from the inside")
+			groupRules, err := innerClient.Poll([]string{"group1", "group2"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(groupRules).To(BeEmpty())
+
+			By("listing the rules from the outside")
 			rules, err := outerClient.ListRules()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(BeEmpty())
