@@ -32,32 +32,32 @@ type Runner struct {
 	Rainmaker     rainmaker.Client
 }
 
-func (r *Runner) getRule(name1, name2 string) (models.Rule, error) {
-	app1, err := r.CliConnection.GetApp(name1)
+func (r *Runner) getRule(sourceName, destinationName string) (models.Rule, error) {
+	app1, err := r.CliConnection.GetApp(sourceName)
 	if err != nil {
-		return models.Rule{}, fmt.Errorf("getting app %s: %s", name1, err)
+		return models.Rule{}, fmt.Errorf("getting app %s: %s", sourceName, err)
 	}
-	app2, err := r.CliConnection.GetApp(name2)
+	app2, err := r.CliConnection.GetApp(destinationName)
 	if err != nil {
-		return models.Rule{}, fmt.Errorf("getting app %s: %s", name2, err)
+		return models.Rule{}, fmt.Errorf("getting app %s: %s", destinationName, err)
 	}
-	return models.Rule{Group1: app1.Guid, Group2: app2.Guid}, nil
+	return models.Rule{Source: app1.Guid, Destination: app2.Guid}, nil
 }
 
 func (r *Runner) resolveAndPrettyPrint(rule models.Rule, token string) (string, error) {
 	token = strings.TrimPrefix(token, "bearer ") // rainmaker adds its own bearer
-	app1, err := r.Rainmaker.Applications.Get(rule.Group1, token)
+	app1, err := r.Rainmaker.Applications.Get(rule.Source, token)
 	if err != nil {
-		return "", fmt.Errorf("resolve %s: %s", rule.Group1, err)
+		return "", fmt.Errorf("resolve %s: %s", rule.Source, err)
 	}
-	app2, err := r.Rainmaker.Applications.Get(rule.Group2, token)
+	app2, err := r.Rainmaker.Applications.Get(rule.Destination, token)
 	if err != nil {
-		return "", fmt.Errorf("resolve %s: %s", rule.Group2, err)
+		return "", fmt.Errorf("resolve %s: %s", rule.Destination, err)
 	}
 
-	name1 := app1.Name
-	name2 := app2.Name
-	return fmt.Sprintf("%s <--> %s", name1, name2), nil
+	sourceName := app1.Name
+	destinationName := app2.Name
+	return fmt.Sprintf("%s --> %s", sourceName, destinationName), nil
 }
 
 func (r *Runner) Run(args []string) error {
@@ -98,9 +98,9 @@ func (r *Runner) Run(args []string) error {
 		if len(args) != 3 {
 			return fmt.Errorf("missing required arguments, try -h")
 		}
-		name1 := args[1]
-		name2 := args[2]
-		rule, err := r.getRule(name1, name2)
+		sourceName := args[1]
+		destinationName := args[2]
+		rule, err := r.getRule(sourceName, destinationName)
 		if err != nil {
 			return fmt.Errorf("%s", err)
 		}
@@ -110,13 +110,13 @@ func (r *Runner) Run(args []string) error {
 			if err != nil {
 				return fmt.Errorf("allow: %s", err)
 			}
-			r.UserLogger.Printf("allowed %s <--> %s\n", name1, name2)
+			r.UserLogger.Printf("allowed %s --> %s\n", sourceName, destinationName)
 		case CommandDisallow:
 			err = r.Client.DeleteRule(rule)
 			if err != nil {
 				return fmt.Errorf("disallow: %s", err)
 			}
-			r.UserLogger.Printf("disallowed %s <--> %s\n", name1, name2)
+			r.UserLogger.Printf("disallowed %s --> %s\n", sourceName, destinationName)
 		}
 	default:
 		return fmt.Errorf("unknown command: %s", command)

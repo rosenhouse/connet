@@ -38,12 +38,12 @@ func (s *MemoryStore) GetWhitelists(logger lager.Logger, groups []string) ([]mod
 			continue
 		}
 		for _, rule := range s.rules {
-			if rule.Group2 != destGroup {
+			if rule.Destination != destGroup {
 				continue
 			}
 			all[i].AllowedSources = append(all[i].AllowedSources, models.TaggedGroup{
-				ID:  rule.Group1,
-				Tag: s.tags[rule.Group1],
+				ID:  rule.Source,
+				Tag: s.tags[rule.Source],
 			})
 		}
 	}
@@ -56,15 +56,15 @@ func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
 	logger.Info("start")
 	defer logger.Info("done")
 
-	g1Tag, err := s.Tagger.GetTag(rule.Group1)
+	g1Tag, err := s.Tagger.GetTag(rule.Source)
 	if err != nil {
-		logger.Error("get-tag", err, lager.Data{"group": rule.Group1})
+		logger.Error("get-tag", err, lager.Data{"group": rule.Source})
 		return fmt.Errorf("get tag: %s", err)
 	}
 
-	g2Tag, err := s.Tagger.GetTag(rule.Group2)
+	g2Tag, err := s.Tagger.GetTag(rule.Destination)
 	if err != nil {
-		logger.Error("get-tag", err, lager.Data{"group": rule.Group2})
+		logger.Error("get-tag", err, lager.Data{"group": rule.Destination})
 		return fmt.Errorf("get tag: %s", err)
 	}
 
@@ -72,8 +72,8 @@ func (s *MemoryStore) Add(logger lager.Logger, rule models.Rule) error {
 	defer s.lock.Unlock()
 
 	s.rules = append(s.rules, rule)
-	s.tags[rule.Group1] = g1Tag
-	s.tags[rule.Group2] = g2Tag
+	s.tags[rule.Source] = g1Tag
+	s.tags[rule.Destination] = g2Tag
 	logger.Info("added", lager.Data{"rule": rule, "group1-tag": g1Tag, "group2-tag": g2Tag})
 
 	return nil

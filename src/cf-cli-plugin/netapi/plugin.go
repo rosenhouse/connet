@@ -76,16 +76,16 @@ func (p *Plugin) GetMetadata() plugin.PluginMetadata {
 		Commands: []plugin.Command{
 			plugin.Command{
 				Name:     CommandAllow,
-				HelpText: "Allow direct network traffic between two apps",
+				HelpText: "Allow direct network traffic from one app to another",
 				UsageDetails: plugin.Usage{
-					Usage: fmt.Sprintf("cf %s APP_ONE APP_TWO", CommandAllow),
+					Usage: fmt.Sprintf("cf %s SOURCE_APP DESTINATION_APP", CommandAllow),
 				},
 			},
 			plugin.Command{
 				Name:     CommandDisallow,
 				HelpText: "Remove an existing net-allow rule",
 				UsageDetails: plugin.Usage{
-					Usage: fmt.Sprintf("cf %s APP_ONE APP_TWO", CommandDisallow),
+					Usage: fmt.Sprintf("cf %s SOURCE_APP DESTINATION_APP", CommandDisallow),
 				},
 			},
 			plugin.Command{

@@ -30,13 +30,13 @@ var _ = Describe("Store", func() {
 	Describe("tagging", func() {
 		It("gets a tag for each rule", func() {
 			Expect(memStore.Add(logger, models.Rule{
-				Group1: "group0",
-				Group2: "group1",
+				Source:      "group0",
+				Destination: "group1",
 			})).To(Succeed())
 			Expect(tagCallCount).To(Equal(2))
 			Expect(memStore.Add(logger, models.Rule{
-				Group1: "group0",
-				Group2: "group1",
+				Source:      "group0",
+				Destination: "group1",
 			})).To(Succeed())
 			Expect(tagCallCount).To(Equal(4))
 		})
@@ -47,8 +47,8 @@ var _ = Describe("Store", func() {
 
 		BeforeEach(func() {
 			Expect(memStore.Add(logger, models.Rule{
-				Group1: "group0",
-				Group2: "group1",
+				Source:      "group0",
+				Destination: "group1",
 			})).To(Succeed())
 
 			var err error

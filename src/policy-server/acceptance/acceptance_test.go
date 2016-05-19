@@ -85,8 +85,8 @@ var _ = Describe("Policy server", func() {
 
 			By("adding a new rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Group1: "group1",
-				Group2: "group2",
+				Source:      "group1",
+				Destination: "group2",
 			})).To(Succeed())
 
 			By("getting the packet tags for the two groups")
@@ -113,8 +113,8 @@ var _ = Describe("Policy server", func() {
 
 			By("adding a second rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Group1: "group2",
-				Group2: "group3",
+				Source:      "group2",
+				Destination: "group3",
 			})).To(Succeed())
 
 			By("getting the packet tags for the third group")
@@ -134,8 +134,8 @@ var _ = Describe("Policy server", func() {
 
 			By("adding a third rule")
 			Expect(outerClient.AddRule(models.Rule{
-				Group1: "group2",
-				Group2: "group2",
+				Source:      "group2",
+				Destination: "group2",
 			})).To(Succeed())
 
 			By("getting the packet tags for the second group")
@@ -159,15 +159,15 @@ var _ = Describe("Policy server", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(HaveLen(3))
 			Expect(rules).To(ConsistOf([]models.Rule{
-				{Group1: "group1", Group2: "group2"},
-				{Group1: "group2", Group2: "group3"},
-				{Group1: "group2", Group2: "group2"},
+				{Source: "group1", Destination: "group2"},
+				{Source: "group2", Destination: "group3"},
+				{Source: "group2", Destination: "group2"},
 			}))
 
 			By("removing the second rule")
 			Expect(outerClient.DeleteRule(models.Rule{
-				Group1: "group2",
-				Group2: "group3",
+				Source:      "group2",
+				Destination: "group3",
 			})).To(Succeed())
 
 			By("listing the rules")
@@ -175,8 +175,8 @@ var _ = Describe("Policy server", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rules).To(HaveLen(2))
 			Expect(rules).To(ConsistOf([]models.Rule{
-				{Group1: "group1", Group2: "group2"},
-				{Group1: "group2", Group2: "group2"},
+				{Source: "group1", Destination: "group2"},
+				{Source: "group2", Destination: "group2"},
 			}))
 
 			By("getting the packet tags for the third group")
